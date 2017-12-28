@@ -47,6 +47,15 @@ Type the following command into the gdb console
 
 enjoy!
 
+### run_target
+
+I added 2 new run_targets:
+
+    ninja openocd
+    ninja gdb
+
+both open a new console and run an instance of gdb or openocd. which are specified in the `cross_file.build` file
+
 ## Toolchain Installation
 
 take a look here : [Toochain.md](https://github.com/hwengineer/STM32F3Discovery-meson-example/blob/master/Toolchain.md)

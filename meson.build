@@ -143,7 +143,6 @@ maindump = custom_target(
 
 #==============================================================================#
 # support target commands
-
 run_target('gdb',
          command : [terminal, '-e', gdb, '-q', '@0@/main.elf'.format(meson.current_build_dir())])
 
