@@ -9,6 +9,8 @@ objdump = 'llvm-objdump-5.0'
 objcopy = 'arm-none-eabi-objcopy'
 strip   = 'arm-none-eabi-strip'
 gdb     = 'arm-none-eabi-gdb'
+terminal= 'x-terminal-emulator'
+openocd = '/usr/local/bin/openocd'
 
 [properties]
 c_args      = [

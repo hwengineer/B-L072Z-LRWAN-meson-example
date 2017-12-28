@@ -51,7 +51,7 @@ enjoy!
 
 take a look here : [Toochain.md](https://github.com/hwengineer/STM32F3Discovery-meson-example/blob/master/Toolchain.md)
 
-### clone this repo
+## clone this repo
 
 go to your destination folder and clone the repo in
 

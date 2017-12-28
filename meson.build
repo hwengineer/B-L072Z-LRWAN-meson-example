@@ -10,7 +10,7 @@ linkArgs      = []
 linkDeps      = []
 
 #==============================================================================#
-# Add source files
+# Add global arguments
 add_global_arguments('-DSTM32L0',        language : 'c')
 add_global_arguments('-DSTM32L072xx',    language : 'c')
 add_global_arguments('-DUSE_HAL_DRIVER', language : 'c')
@@ -35,7 +35,6 @@ if host_machine.cpu() == 'cortex-m0'
     add_global_arguments('-mcpu=cortex-m0',      language : 'c')
 elif host_machine.cpu() == 'cortex-m0+'
     add_global_arguments('-mcpu=cortex-m0plus',  language : 'c')
-
 elif host_machine.cpu() == 'cortex-m1'
     add_global_arguments('-mcpu=cortex-m1',      language : 'c')
 elif host_machine.cpu() == 'cortex-m3'
@@ -46,38 +45,10 @@ elif host_machine.cpu() == 'cortex-m7'
     add_global_arguments('-mcpu=cortex-m7',      language : 'c')
 endif
 
-if meson.get_compiler('c').get_id() == 'clang'
-  if host_machine.cpu() == 'cortex-m0'
-      add_global_arguments('--target=thumbv6m-none-eabi',language : 'c')
-  elif host_machine.cpu() == 'cortex-m0+'
-      add_global_arguments('--target=arm-none-eabi',language : 'c')
-
-      add_global_arguments('-mthumb',language : 'c')
-      add_global_arguments('-mfloat-abi=softfp',language : 'c')
-      # add_global_arguments('-mfpu=fpv4-sp-d16"',language : 'c')
-
-
-
-      # add_global_arguments('--target=armv6-m-none-eabi',language : 'c')
-
-      # add_global_arguments('-march=arm',language : 'c')
-      # add_global_arguments('-mcpu=cortex-m0plus',  language : 'c')
-      # add_global_arguments('-mcpu=armv6-m',language : 'c')
-      # add_global_arguments('-meabi=none',language : 'c')
-
-  elif host_machine.cpu() == 'cortex-m1'
-      add_global_arguments('--target=thumbv6m-none-eabi',language : 'c')
-  elif host_machine.cpu() == 'cortex-m3'
-      add_global_arguments('--target=thumbv7m-none-eabi',language : 'c')
-  elif host_machine.cpu() == 'cortex-m4'
-      add_global_arguments('--target=thumbv7em-none-eabi',language : 'c')
-      #add_global_arguments('--target=thumbv7em-none-eabihf',language : 'c') # hardfloat
-  else
-    error('host_machine.cpu no suitable option found')
-  endif
-else
-  # add_global_arguments('-mthumb',            language : 'c')
-endif
+# define target
+add_global_arguments('--target=arm-none-eabi',language : 'c')
+# define language
+add_global_arguments('-mthumb',language : 'c')
 
 #==============================================================================#
 # optimizer Level
@@ -102,8 +73,6 @@ endif
 # add STM library
 subdir('STM32Cube-L0-meson')
 
-message(host_machine.cpu())
-
 #==============================================================================#
 # include newlib_nano : but without C++ features
 # does not work at the moment...
@@ -120,11 +89,7 @@ if meson.get_cross_property('newlib_nano') == true
 endif
 
 #==============================================================================#
-# linkDeps +=  meson.get_compiler('c').find_library('/usr/lib/gcc/arm-none-eabi/4.9.3/armv6-m/libgcc')
 linkDeps +=  meson.get_compiler('c').find_library('/usr/lib/gcc/arm-none-eabi/4.9.3/armv6-m/libgcc')
-
-# is not a static library??S
-# message( meson.get_compiler('c').find_library('/usr/lib/gcc/arm-none-eabi/4.9.3/armv6-m/libgcc'))
 
 #==============================================================================#
 main = executable(
@@ -136,11 +101,16 @@ main = executable(
             include_directories : [incdirs, stm32cube_incdirs] )
 
 #==============================================================================#
+# import binary objects
+objcopy  = '@0@'.format(find_program('objcopy').path())
+objdump  = '@0@'.format(find_program('objdump').path())
+size     = '@0@'.format(find_program('size').path())
+gdb      = '@0@'.format(find_program('gdb').path())
+terminal = '@0@'.format(find_program('terminal').path())
+openocd  = '@0@'.format(find_program('openocd').path())
 
-objcopy = '@0@'.format(find_program('objcopy').path())
-objdump = '@0@'.format(find_program('objdump').path())
-size    = '@0@'.format(find_program('size').path())
-gdb     = '@0@'.format(find_program('gdb').path())
+#==============================================================================#
+# create custom target : create binary, hex dump, size and disassemble dump
 
 mainbin = custom_target(
                         'main.bin',
@@ -168,14 +138,17 @@ maindump = custom_target(
                         'dump',
       capture          : true,
       output           : ['main.dump'],
-      command          : [objdump, '-D', 'main.elf', '>', 'main.dump'],
+      command          : [objdump, '-triple=thumbv6m-none-eabi', '-disassemble-all', '-S', '-t', 'main.elf', '>', 'main.dump'],
       depends          : [main])
 
-# run_target('gdb',
-#         command : [gdb , '-q' , '@0@/main.elf'.format(meson.current_build_dir())])
+#==============================================================================#
+# support target commands
 
-# start openocd 10 /usr/local/bin/openocd -f interface/stlink-v2-1.cfg -f target/stm32l0.cfg
-# llvm-objdump-5.0 -triple=thumbv6m-none-eabi -disassemble-all -S -t main.elf > main.dump
+run_target('gdb',
+         command : [terminal, '-e', gdb, '-q', '@0@/main.elf'.format(meson.current_build_dir())])
+
+run_target('openocd',
+         command : [terminal, '-e', openocd, '-f', 'interface/stlink-v2-1.cfg', '-f' , 'target/stm32l0.cfg'])
 
 #==============================================================================#
 

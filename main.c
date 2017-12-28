@@ -28,19 +28,3 @@ void LED_Init() {
 void SysTick_Handler(void) {
   HAL_IncTick();
 }
-
-
-// /* Configure the system clock @ CPU max */
-//   SystemClock_Config();
-//
-//    /* Set the SysTick to the highest priority in order to avoid
-//    * being blocked inside functions waiting on timeouts.
-//    */
-//    HAL_InitTick(0);
-
-
-// SystemCoreClockUpdate
-
-
-/* Configure the SysTick to have interrupt in 10 ms time basis*/
-  // HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/100);
