@@ -1,7 +1,7 @@
 [binaries]
 c       = 'clang-5.0'
 cpp     = 'clang++-5.0'
-ld      = 'llvm-link-5.0'
+ld      = 'ld.lld-5.0'
 ar      = 'llvm-ar-5.0'
 as      = 'llvm-as-5.0'
 size    = 'llvm-size-5.0'
@@ -14,6 +14,9 @@ openocd = '/usr/local/bin/openocd'
 
 [properties]
 c_args      = [
+               '--target=arm-none-eabi',    # define target for clang
+               '-mthumb',                   # define language
+               #------------------------------------
                '-fshort-enums',             # otherwise errors at linking...
                '-fmessage-length=0',        # all error warnings in a single line (default 72)
                '-fsigned-char',             # char is per default unsigned
@@ -41,23 +44,21 @@ c_args      = [
                '-Wno-switch-enum',
                '-Wno-missing-variable-declarations',
                #------------------------------------
+
+               # '-emit-llvm', # creates segfault : need further inspection
+               '-v', # option for more verbose output
                ]
 
 c_link_args = [
                '--target=arm-none-eabi', # define target for linker
+               '-v',                     # option for more verbose output
+                '-nostdlib',             # do not import the standard library's
 
-               '-Wl,-Map,output.map',    # create linker map file
-               '-Wl,--as-needed',        # linker optimasation
-               '-Wl,--gc-sections',      # needed for optimization
+               # '-Wl,-Map,output.map',    # create linker map file
+               # '-Wl,--as-needed',        # linker optimisation
+               # '-Wl,--gc-sections',      # needed for optimization
                #'-flto',
-
-               '-nostdlib',
-               # '-nostdlibinc',
               ]
-
-# doesnt work at the moment
-# newlib_nano = true
-newlib_nano = false
 
 [host_machine]
 system     = 'none'

@@ -2,102 +2,65 @@ project('blink', 'c',
           default_options : ['b_lto=false',
                              'b_asneeded=false'])
 
+#==============================================================================#
 # Initialize some globals
 srcs          = []
 incdirs       = []
-compilerArgs  = []
-linkArgs      = []
-linkDeps      = []
+c_args        = []
+link_args     = []
+link_deps     = []
 
 #==============================================================================#
-# Add global arguments
-add_global_arguments('-DSTM32L0',        language : 'c')
-add_global_arguments('-DSTM32L072xx',    language : 'c')
-add_global_arguments('-DUSE_HAL_DRIVER', language : 'c')
-add_global_arguments('-DUSE_LEGACY',     language : 'c')
+# uController / HAL Driver dependend options
+c_args     += '-DSTM32L072xx' # HAL Driver define
+linkfiles   = files(['STM32-ldscripts/STM32L0/STM32L072CZ.ld', 'STM32-ldscripts/simple.ld'])
+startupfile = files(['STM32-startup/STM32L0/stm32l072xx.s'])
 
 #==============================================================================#
-# Add source files
-srcs += files(['main.c','STM32-startup/stm32l072xx.s',])
+# convenience function : get correct -mcpu flag depending on hostmachine
+cpu = host_machine.cpu() == 'cortex-m0+' ? 'cortex-m0plus' : host_machine.cpu()
+c_args += '-mcpu=@0@'.format( cpu )
 
 #==============================================================================#
-# Add linker files
-linkfiles = files(['STM32-ldscripts/STM32L072CZ.ld', 'STM32-ldscripts/simple.ld'])
+# convenience function : link correct C-runtime for each controller
+# TODO: use llvm compiler-rt
+arch       = (host_machine.cpu() == 'cortex-m0') or (host_machine.cpu() == 'cortex-m0+') or (host_machine.cpu() == 'cortex-m1') ? 'armv6-m'  : ''
+arch      += (host_machine.cpu() == 'cortex-m3') ?                                                                                'armv7-m'  : ''
+arch      += (host_machine.cpu() == 'cortex-m4') or (host_machine.cpu() == 'cortex-m7') ?                                         'armv7e-m' : ''
 
-foreach linkfile : linkfiles
- linkArgs += ['-Wl,-T,@0@/@1@'.format(meson.current_source_dir(), linkfile)]
-endforeach
-
-#==============================================================================#
-
-# add cpu specific compiler args (without hard fpu support  options)
-if host_machine.cpu() == 'cortex-m0'
-    add_global_arguments('-mcpu=cortex-m0',      language : 'c')
-elif host_machine.cpu() == 'cortex-m0+'
-    add_global_arguments('-mcpu=cortex-m0plus',  language : 'c')
-elif host_machine.cpu() == 'cortex-m1'
-    add_global_arguments('-mcpu=cortex-m1',      language : 'c')
-elif host_machine.cpu() == 'cortex-m3'
-    add_global_arguments('-mcpu=cortex-m3',      language : 'c')
-elif host_machine.cpu() == 'cortex-m4'
-    add_global_arguments('-mcpu=cortex-m4',      language : 'c')
-elif host_machine.cpu() == 'cortex-m7'
-    add_global_arguments('-mcpu=cortex-m7',      language : 'c')
-endif
-
-# define target
-add_global_arguments('--target=arm-none-eabi',language : 'c')
-# define language
-add_global_arguments('-mthumb',language : 'c')
+link_deps +=  meson.get_compiler('c').find_library('/usr/lib/gcc/arm-none-eabi/4.9.3/@0@/libgcc'.format(arch))
 
 #==============================================================================#
-# optimizer Level
-  add_global_arguments('-Og',            language : 'c')
-  add_global_arguments('-g3',            language : 'c')
-  # add_global_arguments('-gdwarf-5',      language : 'c')
-#==============================================================================#
+# convenience function : use correct Floating Point option
+# TODO: as title says...
 
+#==============================================================================#
+# we have to define the std headers : for stdint.h
 if meson.get_compiler('c').get_id() == 'clang'
-  # extra verbose output
-  add_global_arguments('-v',    language : 'c')
-
-  # bare-metal : stdlink includes
-  incdirs += include_directories('/usr/lib/arm-none-eabi/include/')
-
-  # /usr/lib/gcc/arm-none-eabi/4.9.3/armv6-m/
-  # eventuell hier isystem oder isysroot???
-
+  incdirs += include_directories('/usr/lib/arm-none-eabi/include/') # bare-metal : std header includes
 endif
+
+#==============================================================================#
+# create Debug Flags, depending on meson buildtype
+c_args += get_option('buildtype') == 'release' ? '-DNDEBUG' : '-DDEBUG'
+
+#==============================================================================#
+# parse linkerfiles to a linker commando
+foreach linkfile : linkfiles
+ link_args += ['-Wl,-T,@0@/@1@'.format(meson.current_source_dir(), linkfile)]
+endforeach
 
 #==============================================================================#
 # add STM library
 subdir('STM32Cube-L0-meson')
 
 #==============================================================================#
-# include newlib_nano : but without C++ features
-# does not work at the moment...
-if meson.get_cross_property('newlib_nano') == true
-  message('newlib_nano added')
-  linkDeps +=  meson.get_compiler('c').find_library('/usr/lib/arm-none-eabi/newlib/libc_nano')
-  linkDeps +=  meson.get_compiler('c').find_library('/usr/lib/arm-none-eabi/newlib/librdimon_nano')
-  linkDeps +=  meson.get_compiler('c').find_library('/usr/lib/arm-none-eabi/newlib/libg_nano')
-  linkDeps +=  meson.get_compiler('c').find_library('/usr/lib/arm-none-eabi/newlib/libstdc++_nano')
-  linkDeps +=  meson.get_compiler('c').find_library('/usr/lib/arm-none-eabi/newlib/libsupc++_nano')
-
-  linkDeps +=  meson.get_compiler('c').find_library('/usr/lib/arm-none-eabi/newlib/libm')
-  # linkDeps +=  meson.get_compiler('c').find_library('/usr/lib/arm-none-eabi/newlib/libnosys')
-endif
-
-#==============================================================================#
-linkDeps +=  meson.get_compiler('c').find_library('/usr/lib/gcc/arm-none-eabi/4.9.3/armv6-m/libgcc')
-
-#==============================================================================#
 main = executable(
             'main.elf',
-            [srcs, stm32cube_srcs] ,
-            c_args              : compilerArgs,
-            link_args           : linkArgs,
-            dependencies        : linkDeps,
+            [srcs, stm32cube_srcs, 'main.c', startupfile] ,
+            c_args              : [c_args ],
+            link_args           : [link_args, '-Wl,--gc-sections'],
+            dependencies        : link_deps,
             include_directories : [incdirs, stm32cube_incdirs] )
 
 #==============================================================================#
@@ -106,12 +69,11 @@ objcopy  = '@0@'.format(find_program('objcopy').path())
 objdump  = '@0@'.format(find_program('objdump').path())
 size     = '@0@'.format(find_program('size').path())
 gdb      = '@0@'.format(find_program('gdb').path())
-terminal = '@0@'.format(find_program('terminal').path())
-openocd  = '@0@'.format(find_program('openocd').path())
+terminal = '@0@'.format(find_program('terminal',required:false).path())
+openocd  = '@0@'.format(find_program('openocd', required:false).path())
 
 #==============================================================================#
 # create custom target : create binary, hex dump, size and disassemble dump
-
 mainbin = custom_target(
                         'main.bin',
     output           : ['main.bin'],
@@ -144,7 +106,7 @@ maindump = custom_target(
 #==============================================================================#
 # support target commands
 run_target('gdb',
-         command : [terminal, '-e', gdb, '-q', '@0@/main.elf'.format(meson.current_build_dir())])
+         command : [terminal, '--working-directory=@0@'.format(meson.source_root()), '-e', gdb, '-q', '@0@/main.elf'.format(meson.current_build_dir())])
 
 run_target('openocd',
          command : [terminal, '-e', openocd, '-f', 'interface/stlink-v2-1.cfg', '-f' , 'target/stm32l0.cfg'])
