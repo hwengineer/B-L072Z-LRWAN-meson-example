@@ -12,6 +12,8 @@ gdb     = 'arm-none-eabi-gdb'
 terminal= 'x-terminal-emulator'
 openocd = '/usr/local/bin/openocd'
 
+exe_wrapper = 'meson_exe_wrapper.sh'
+
 [properties]
 c_args      = [
                '--target=arm-none-eabi',    # define target for clang
@@ -46,7 +48,7 @@ c_args      = [
                #------------------------------------
 
                # '-emit-llvm', # creates segfault : need further inspection
-               '-v', # option for more verbose output
+               #'-v', # option for more verbose output
                ]
 
 c_link_args = [
