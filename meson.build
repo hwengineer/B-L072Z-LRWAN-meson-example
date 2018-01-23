@@ -12,6 +12,7 @@ link_deps     = []
 
 #==============================================================================#
 # uController / HAL Driver dependend options
+c_args     += '-DREGION_EU868' # LoRa Driver option
 c_args     += '-DSTM32L072xx' # HAL Driver define
 linkfiles   = files(['STM32-ldscripts/STM32L0/STM32L072CZ.ld', 'STM32-ldscripts/simple.ld'])
 startupfile = files(['STM32-startup/STM32L0/stm32l072xx.s'])

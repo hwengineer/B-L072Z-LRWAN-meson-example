@@ -12,7 +12,7 @@
 #include "stm32l0xx_hal.h"
 // #include "b-l072z-lrwan1.h"
 // #include "stm32l0xx_hal_conf.h"
-// #include "mlm32l0xx_hw_conf.h"
+#include "mlm32l0xx_hw_conf.h"
 
 
 /* --------Preprocessor compile swicth------------ */

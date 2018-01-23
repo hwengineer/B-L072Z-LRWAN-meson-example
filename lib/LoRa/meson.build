@@ -1,5 +1,7 @@
 # Sources
 
+# http://stackforce.github.io/LoRaMac-doc/
+
 # internal incdirs and srcsfiles
 incdirs += include_directories([  'Inc/',
                                   '.'
